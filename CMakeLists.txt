@@ -9,5 +9,5 @@ find_package(Matlab REQUIRED)
 
 target_include_directories(CT1 PUBLIC ${Matlab_INCLUDE_DIRS})
 
-# This must come after add_executable.
-matlab_add_mex(NAME forward SRC forward_projection.cpp R2018a)  # Assuming MATLAB version is 2018a or higher.
+# This must come after add_executable.  # Assuming MATLAB version is 2018a or higher.
+matlab_add_mex(NAME forward_projection SRC forward_projection.cpp R2018a)
