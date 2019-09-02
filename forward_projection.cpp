@@ -1,52 +1,43 @@
 #include <mex.h>
+
 #include <iostream>
-
-
-/* The computational routine */
 
 
 // Error checking code.
 void errorCheck(int nlhs, int nrhs, const mxArray *prhs[]){
-    double dim;
-
-    /* Check for proper number of arguments. */
-    if ( nrhs != 1 || mxIsNumeric(prhs[0]) == 0 || mxGetNumberOfElements(prhs[0]) != 1 ) {
-        mexErrMsgIdAndTxt("MATLAB:arraySize:rhs",
-                          "This function requires one scalar numeric input.");
+    /* check for proper number of arguments */
+    if(nrhs!=10) {
+        mexErrMsgIdAndTxt("CT1:forward:nrhs","Ten inputs required.");
+    }
+    if(nlhs!=1) {
+        mexErrMsgIdAndTxt("CT1:forward:nlhs","One output required.");
+    }
+    /* make sure the first input argument is scalar */
+    if( !mxIsSingle(prhs[0]) || mxIsComplex(prhs[0])) {
+        mexErrMsgIdAndTxt("CT1:forward:notSingle","Input must be a single-type floating point array.");
     }
 
-    dim = mxGetScalar(prhs[0]);
-
-    if ( dim < 0 ) {
-        mexErrMsgIdAndTxt("MATLAB:arraySize:dimensionNegative",
-                          "The input dimension must be positive.");
+    /* check that number of rows in second input argument is 1 */
+    if(mxGetNumberOfDimensions(prhs[0])!=2) {
+        mexErrMsgIdAndTxt("CT1:forward:notMatrix","The first input must be a 2D matrix.");
     }
 
-#if !defined(MX_COMPAT_32)
-    /* Make sure that it is safe to cast dim to mwSize when using largeArrayDims.*/
-    if ( dim > MWSIZE_MAX ) {
-        mexErrMsgIdAndTxt("MATLAB:arraySize:dimensionTooLarge",
-                          "The input dimension, %.0f, is larger than the maximum value of mwSize, %u, when built with largeArrayDims.", dim, MWSIZE_MAX);
-    }
-#endif
-
-    if ( nlhs > 1 ) {
-        mexErrMsgIdAndTxt("MATLAB:arraySize:lhs","Too many output arguments.");
-    }
-
+    // Maybe add type checks for the others too.
 }
 
 
 /* The gateway function */
-void mexFunction( int nlhs, mxArray *plhs[],
-                  int nrhs, const mxArray *prhs[])
-{
-    // Expected inputs:
+void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+    using namespace std;  // Use std only inside the mexFunction, not globally.
+
+    // Expected inputs. Arranged in order.
+    float *input_array;
+
     size_t num_det_pix;
     float det_pix_len;
 
-    size_t img_pix_num_x;
-    size_t img_pix_num_y;
+    size_t num_img_pix_x;
+    size_t num_img_pix_y;
 
     float img_pix_len_x;
     float img_pix_len_y;
@@ -56,60 +47,47 @@ void mexFunction( int nlhs, mxArray *plhs[],
     float projection_range;
 
 
+    // Expected outputs.
+    float *output_array;
 
-
-    double multiplier;              /* input scalar */
-    double *inMatrix;               /* 1xN input matrix */
-    size_t ncols;                   /* size of matrix */
-    double *outMatrix;              /* output matrix */
-
-    /* check for proper number of arguments */
-    if(nrhs!=2) {
-        mexErrMsgIdAndTxt("MyToolbox:arrayProduct:nrhs","Two inputs required.");
-    }
-    if(nlhs!=1) {
-        mexErrMsgIdAndTxt("MyToolbox:arrayProduct:nlhs","One output required.");
-    }
-    /* make sure the first input argument is scalar */
-    if( !mxIsDouble(prhs[0]) ||
-        mxIsComplex(prhs[0]) ||
-        mxGetNumberOfElements(prhs[0])!=1 ) {
-        mexErrMsgIdAndTxt("MyToolbox:arrayProduct:notScalar","Input multiplier must be a scalar.");
-    }
-
-    /* make sure the second input argument is type double */
-    if( !mxIsDouble(prhs[1]) ||
-        mxIsComplex(prhs[1])) {
-        mexErrMsgIdAndTxt("MyToolbox:arrayProduct:notDouble","Input matrix must be type double.");
-    }
-
-    /* check that number of rows in second input argument is 1 */
-    if(mxGetM(prhs[1])!=1) {
-        mexErrMsgIdAndTxt("MyToolbox:arrayProduct:notRowVector","Input must be a row vector.");
-    }
-
-    /* get the value of the scalar input  */
-    multiplier = mxGetScalar(prhs[0]);
+    errorCheck(nlhs, nrhs, prhs);  // Checks for errors in inputs and outputs.
 
     /* create a pointer to the real data in the input matrix  */
 #if MX_HAS_INTERLEAVED_COMPLEX
-    inMatrix = mxGetDoubles(prhs[1]);
+    input_array = mxGetSingles(prhs[0]);
 #else
-    inMatrix = mxGetPr(prhs[1]);
+    input_array = mxGetPr(prhs[0]);
 #endif
 
+    /* get the value of the scalar input  */
+    num_det_pix = mxGetScalar(prhs[1]);
+    det_pix_len = mxGetScalar(prhs[2]);
+
+    num_img_pix_x = mxGetScalar(prhs[3]);
+    num_img_pix_y = mxGetScalar(prhs[4]);
+
+    img_pix_len_x = mxGetScalar(prhs[5]);
+    img_pix_len_y = mxGetScalar(prhs[6]);
+
+    sampling_interval = mxGetScalar(prhs[7]);
+    num_views = mxGetScalar(prhs[8]);
+    projection_range = mxGetScalar(prhs[9]);
+
+
     /* get dimensions of the input matrix */
-    ncols = mxGetN(prhs[1]);
+    size_t num_cols = mxGetN(prhs[0]);
+    size_t num_rows = mxGetM(prhs[0]);
 
     /* create the output matrix */
-    plhs[0] = mxCreateDoubleMatrix(1,(mwSize)ncols,mxREAL);
+    plhs[0] = mxCreateNumericMatrix(num_rows, num_cols, mxSINGLE_CLASS, mxREAL);
 
     /* get a pointer to the real data in the output matrix */
 #if MX_HAS_INTERLEAVED_COMPLEX
-    outMatrix = mxGetDoubles(plhs[0]);
+    output_array = mxGetSingles(plhs[0]);
 #else
-    outMatrix = mxGetPr(plhs[0]);
+    output_array = mxGetPr(plhs[0]);
 #endif
 
     /* call the computational routine */
+    // TODO: Work on the code from here. Get the other value. Type checks might also be added for the other values.
 }
