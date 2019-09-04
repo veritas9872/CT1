@@ -34,26 +34,24 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     size_t num_det_pix = mxGetScalar(prhs[1]);  // Number of detector pixels.
     float det_pix_len = mxGetScalar(prhs[2]);  // Detector pixel length.
 
-    size_t num_img_pix_x = mxGetScalar(prhs[3]);
-    size_t num_img_pix_y = mxGetScalar(prhs[4]);
+    float img_pix_len_x = mxGetScalar(prhs[3]);
+    float img_pix_len_y = mxGetScalar(prhs[4]);
 
-    float img_pix_len_x = mxGetScalar(prhs[5]);
-    float img_pix_len_y = mxGetScalar(prhs[6]);
-
-    float sampling_interval = mxGetScalar(prhs[7]);
-    size_t num_views = mxGetScalar(prhs[8]);
-    float projection_range = mxGetScalar(prhs[9]);  // Should be in degrees, not radians.
+    float sampling_interval = mxGetScalar(prhs[5]);
+    size_t num_views = mxGetScalar(prhs[6]);
+    float projection_range = mxGetScalar(prhs[7]);  // Should be in degrees, not radians.
 
     if ((img_pix_len_x < sampling_interval) || (img_pix_len_y < sampling_interval)) {
         cout << "Warning! Sampling interval is shorter than pixel length!" << endl;
     }
 
     /* get dimensions of the input matrix */
-    size_t num_cols = mxGetN(prhs[0]);
-    size_t num_rows = mxGetM(prhs[0]);
+    size_t num_img_pix_cols = mxGetN(prhs[0]);
+    size_t num_img_pix_rows = mxGetM(prhs[0]);
     size_t num_elements = mxGetNumberOfElements(prhs[0]);
 
-    cout << "Num cols: " << num_cols << ". Num rows: " << num_rows << ". Total: " << num_elements << '.' << endl;
+    cout << "Num cols: " << num_img_pix_cols << ". Num rows: "
+         << num_img_pix_rows << ". Total: " << num_elements << '.' << endl;
 
     // Unavoidable memory copy. No way to transfer data from C array to std vector without memory copy.
     // If memory copy can be removed while vector is still used, please do so. Memory copy is very time consuming.
@@ -70,8 +68,8 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     output_array = mxGetPr(plhs[0]);
 #endif
 
-    float img_len_x = num_img_pix_x * img_pix_len_x;
-    float img_len_y = num_img_pix_y * img_pix_len_y;
+    float img_len_x = num_img_pix_cols * img_pix_len_x;
+    float img_len_y = num_img_pix_rows * img_pix_len_y;
     float det_len = num_det_pix * det_pix_len;
 
     if ((det_len < img_len_x) || (det_len < img_len_y)) {
@@ -90,8 +88,8 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     float rad = (M_PIf32 / 180);  // (PI / 180) in float.
     float radian_delta = projection_range / num_views * rad;
 
-    float img_range_x = (num_img_pix_x - 1) * img_pix_len_x / 2;
-    float img_range_y = (num_img_pix_y - 1) * img_pix_len_y / 2;
+    float img_range_x = (num_img_pix_cols - 1) * img_pix_len_x / 2;
+    float img_range_y = (num_img_pix_rows - 1) * img_pix_len_y / 2;
 
     float det_offset = (num_det_pix - 1) * det_pix_len / 2;
     float det_offset_x, det_offset_y;
@@ -148,7 +146,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                 // Ignoring cases where X-rays hit the edges. This will be fixed later.
                 // Alternatively, the input data could be zero-padded to allow this code to work exactly.
                 in_range = (-img_range_x <= x_pos) && (x_pos < img_range_x)
-                           && (-img_range_y < y_pos) && (y_pos <= img_range_y);
+                        && (-img_range_y < y_pos) && (y_pos <= img_range_y);
 
                 if (in_range) {
                     // Changing from xy coordinates to row/column coordinate system of the input image.
@@ -157,11 +155,14 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                     dc = img_range_x + x_pos - col;
                     dr = img_range_y - y_pos - row;
 
+                    cout << "Value: " << (col + 1) * num_img_pix_rows + (row + 1) << endl;
+                    cout << "Row: " << row << " Col: " << col << endl;
+
                     // Column major indexing of the input.
-                    top_left = image.at(col * num_rows + row);
-                    down_left = image.at(col * num_rows + (row + 1));
-                    top_right = image.at((col + 1) * num_rows + row);
-                    down_right = image.at((col + 1) * num_rows + (row + 1));
+                    top_left = image.at(col * num_img_pix_rows + row);
+                    down_left = image.at(col * num_img_pix_rows + (row + 1));
+                    top_right = image.at((col + 1) * num_img_pix_rows + row);
+                    down_right = image.at((col + 1) * num_img_pix_rows + (row + 1));
 
                     bilinear = top_left * (1 - dr) * (1 - dc)
                                + down_left * dr * (1 - dc)
@@ -183,8 +184,8 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 // Error checking code.
 void errorCheck(int nlhs, int nrhs, const mxArray *prhs[]){
     /* check for proper number of arguments */
-    if(nrhs!=10) {
-        mexErrMsgIdAndTxt("CT1:forward_projection:nrhs","Ten inputs required.");
+    if(nrhs!=8) {
+        mexErrMsgIdAndTxt("CT1:forward_projection:nrhs","Eight inputs required.");
     }
     if(nlhs!=1) {
         mexErrMsgIdAndTxt("CT1:forward_projection:nlhs","One output required.");
