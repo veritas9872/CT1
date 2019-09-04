@@ -53,6 +53,8 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     size_t num_rows = mxGetM(prhs[0]);
     size_t num_elements = mxGetNumberOfElements(prhs[0]);
 
+    cout << "Num cols: " << num_cols << ". Num rows: " << num_rows << ". Total: " << num_elements << '.' << endl;
+
     // Unavoidable memory copy. No way to transfer data from C array to std vector without memory copy.
     // If memory copy can be removed while vector is still used, please do so. Memory copy is very time consuming.
     std::vector<float> image(input_array, input_array + num_elements);
@@ -104,14 +106,14 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     bool in_range;
     float ray_sum;
 
-    size_t left, right, top, down;
     float top_left, top_right, down_left, down_right;
     float dc, dr;
     size_t row, col;
+    float bilinear;
 
-    std::vector<float> sinogram(num_views *num_det_pix, 0);
+    std::vector<float> sinogram(num_views * num_det_pix, 0);
 
-    for (view=0; view < num_views; view++) {
+    for (view = 0; view < num_views; view++) {
         // Rotating clockwise with the source at the top and detector at the bottom in the beginning.
         phi = view * radian_delta;  // Angle between detector and x-axis.
 
@@ -131,8 +133,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         x_delta = -sinf(phi) * sampling_interval;
         y_delta = -cosf(phi) * sampling_interval;
 
-
-        for (det_pix_idx=0; det_pix_idx < num_det_pix; det_pix_idx++) {
+        for (det_pix_idx = 0; det_pix_idx < num_det_pix; det_pix_idx++) {
             // The source has numbering from 0~n-1 from the left when the X-ray projection direction is up.
             // At the start, this means that 0 is on the right of the source and n-1 is on the left of the source.
             x_begin = x_center + (det_offset_x - det_pix_idx * x_shift);
@@ -140,7 +141,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
             ray_sum = 0;
 
-            for (acq=0; acq < num_acquisitions; acq++) {
+            for (acq = 0; acq < num_acquisitions; acq++) {
                 x_pos = x_begin + acq * x_delta;
                 y_pos = y_begin + acq * y_delta;
 
@@ -162,17 +163,21 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                     top_right = image.at((col + 1) * num_rows + row);
                     down_right = image.at((col + 1) * num_rows + (row + 1));
 
+                    bilinear = top_left * (1 - dr) * (1 - dc)
+                               + down_left * dr * (1 - dc)
+                               + top_right * (1 - dr) * dc
+                               + down_right * dr * dc;
 
-
+                    ray_sum += bilinear;
                 }
-
             }
             // "sinogram" should be in column-major order.
-            sinogram.at(view * num_det_pix + det_pix_idx);
+            sinogram.at(view * num_det_pix + det_pix_idx) += ray_sum;
         }
     }
+    // Unavoidable memory copy again. Please remove this if it becomes possible at a later date.
+    std::copy(sinogram.begin(), sinogram.end(), output_array);
 }
-
 
 
 // Error checking code.
