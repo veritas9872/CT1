@@ -1,5 +1,4 @@
 #include <mex.h>
-#include <matrix.h>
 
 #define _USE_MATH_DEFINES
 #include <cmath>
@@ -89,10 +88,10 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     float rad = (M_PIf32 / 180);  // (PI / 180) in float.
     float radian_delta = projection_range / num_views * rad;
 
-    float img_range_x = img_len_x / 2 - 0.5f;
-    float img_range_y = img_len_y / 2 - 0.5f;
+    float img_range_x = (num_img_pix_x - 1) * img_pix_len_x / 2;
+    float img_range_y = (num_img_pix_y - 1) * img_pix_len_y / 2;
 
-    float det_offset = det_pix_len * (num_det_pix - 1) / 2;
+    float det_offset = (num_det_pix - 1) * det_pix_len / 2;
     float det_offset_x, det_offset_y;
 
     float x_delta, y_delta;
@@ -100,7 +99,6 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     float x_begin, y_begin;
     float x_pos, y_pos;
     float x_shift, y_shift;
-    float cos_phi, sin_phi;
 
     size_t view, det_pix_idx, acq;
     bool in_range;
@@ -108,30 +106,30 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     size_t left, right, top, down;
     float top_left, top_right, down_left, down_right;
+    float dc, dr;
+    size_t row, col;
 
     std::vector<float> sinogram(num_views *num_det_pix, 0);
 
     for (view=0; view < num_views; view++) {
         // Rotating clockwise with the source at the top and detector at the bottom in the beginning.
         phi = view * radian_delta;  // Angle between detector and x-axis.
-        cos_phi = cosf(phi);
-        sin_phi = sinf(phi);
 
         // xy coordinates of the source center.
-        x_center = dist2src * sin_phi;
-        y_center = dist2src * cos_phi;
+        x_center = dist2src * sinf(phi);
+        y_center = dist2src * cosf(phi);
 
         // Distance from center of detector to fist/last pixel.
-        det_offset_x = det_offset * cos_phi;
-        det_offset_y = det_offset * sin_phi;
+        det_offset_x = det_offset * cosf(phi);
+        det_offset_y = det_offset * sinf(phi);
 
         // Distance between two adjacent pixels.
-        x_shift = det_pix_len * cos_phi;
-        y_shift = det_pix_len * sin_phi;
+        x_shift = det_pix_len * cosf(phi);
+        y_shift = det_pix_len * sinf(phi);
 
         // Movement of X-ray in each direction for each sampling interval.
-        x_delta = -sin_phi * sampling_interval;
-        y_delta = -cos_phi * sampling_interval;
+        x_delta = -sinf(phi) * sampling_interval;
+        y_delta = -cosf(phi) * sampling_interval;
 
 
         for (det_pix_idx=0; det_pix_idx < num_det_pix; det_pix_idx++) {
@@ -148,17 +146,23 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
                 // Ignoring cases where X-rays hit the edges. This will be fixed later.
                 // Alternatively, the input data could be zero-padded to allow this code to work exactly.
-                in_range = (-img_range_x < x_pos) && (x_pos < img_range_x)
-                           && (-img_range_y < y_pos) && (y_pos < img_range_y);
+                in_range = (-img_range_x <= x_pos) && (x_pos < img_range_x)
+                           && (-img_range_y < y_pos) && (y_pos <= img_range_y);
 
                 if (in_range) {
-                    // TODO: I need to change the coordinate system!
-//                    left = floorf(x_pos);
-//                    right = left + 1;
-//                    top = floorf(y_pos);
-//                    down = top + 1;
-//
-//                    top_left = image.at(left * num_det_pix + top);
+                    // Changing from xy coordinates to row/column coordinate system of the input image.
+                    col = floorf(img_range_x + x_pos);
+                    row = floorf(img_range_y - y_pos);
+                    dc = img_range_x + x_pos - col;
+                    dr = img_range_y - y_pos - row;
+
+                    // Column major indexing of the input.
+                    top_left = image.at(col * num_rows + row);
+                    down_left = image.at(col * num_rows + (row + 1));
+                    top_right = image.at((col + 1) * num_rows + row);
+                    down_right = image.at((col + 1) * num_rows + (row + 1));
+
+
 
                 }
 
