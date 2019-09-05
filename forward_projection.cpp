@@ -1,6 +1,7 @@
 /*
- * Implemented forward projection with C++.
- * However, the code is not very efficient due to the use of std vectors.
+ * Naive implementation forward projection with C++.
+ * No attenuation factors or other details have been considered.
+ * The code is not very efficient due to the use of std vectors.
  * This is because the MATLAB mex C API does not allow the direct allocation of MATLAB data to std vectors.
  * Instead, data must pass through C arrays.
  * This forces this code to allocate and copy to and from the C arrays to std vectors.
@@ -117,7 +118,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     for (size_t view = 0; view < num_views; view++) {
         // Rotating clockwise with the detector at the top and source at the bottom in the beginning.
-        // This is different from the MATLAB version.
+        // This is different from the radon function in MATLAB. Flip the output left-right to get equivalent outputs.
         phi = view * radian_delta;  // Angle between incoming X-ray and the y-axis.
 
         // xy coordinates of the detector center.
@@ -183,7 +184,7 @@ void errorCheck(int nlhs, int nrhs, const mxArray *prhs[]){
     if(nlhs!=1) {
         mexErrMsgIdAndTxt("CT1:forward_projection:nlhs","One output required.");
     }
-    /* Make sure the first input argument is an array. */
+    /* Make sure the first input argument is a single-type matrix. */
     if( !mxIsSingle(prhs[0]) || mxIsComplex(prhs[0])) {
         mexErrMsgIdAndTxt("CT1:forward_projection:notSingle","Input must be a single-type floating point array.");
     }
@@ -194,8 +195,8 @@ void errorCheck(int nlhs, int nrhs, const mxArray *prhs[]){
     /* Check that all other inputs are scalars. */
     for (size_t n=1; n < nrhs; n++) {
         if( !mxIsScalar(prhs[n]) || mxIsComplex(prhs[n]) ) {
-            mexErrMsgIdAndTxt("CT1:forward_projection:notRealScalar","All inputs except the first must be"
-                                                                 "(real-valued) scalars.");
+            mexErrMsgIdAndTxt("CT1:forward_projection:notRealScalar",
+                    "All inputs except the first must be (real-valued) scalars.");
         }
     }
 }
