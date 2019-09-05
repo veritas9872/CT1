@@ -1,6 +1,15 @@
+/*
+ * Implemented forward projection with C++.
+ * However, the code is not very efficient due to the use of std vectors.
+ * This is because the MATLAB mex C API does not allow the direct allocation of MATLAB data to std vectors.
+ * Instead, data must pass through C arrays.
+ * This forces this code to allocate and copy to and from the C arrays to std vectors.
+ * This results in two extra memory allocations and one extra zero-initialization. *
+ */
+
 #include <mex.h>
 
-#define _USE_MATH_DEFINES
+#define _USE_MATH_DEFINES  // Necessary on older systems to access PI and other constants.
 #include <cmath>
 #include <cassert>
 
@@ -153,7 +162,6 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                     down_left = image.at(col * num_img_pix_rows + (row + 1));
                     top_right = image.at((col + 1) * num_img_pix_rows + row);
                     down_right = image.at((col + 1) * num_img_pix_rows + (row + 1));
-
 
                     // Bilinear interpolation of nearby pixel values.
                     ray_sum += top_left * (1 - dc) * (1 - dr)
