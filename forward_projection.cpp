@@ -4,7 +4,7 @@
  * This is because the MATLAB mex C API does not allow the direct allocation of MATLAB data to std vectors.
  * Instead, data must pass through C arrays.
  * This forces this code to allocate and copy to and from the C arrays to std vectors.
- * This results in two extra memory allocations and one extra zero-initialization. *
+ * This results in two extra memory allocations and one extra zero-initialization.
  */
 
 #include <mex.h>
@@ -115,9 +115,9 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     // Initializing sinogram with 0s. Unavoidable memory allocation by 0. Empty vector is not possible.
     std::vector<float> sinogram(num_det_pix * num_views, 0);
 
-    // Changed the imagined scenario. Please change accordingly!
     for (size_t view = 0; view < num_views; view++) {
         // Rotating clockwise with the detector at the top and source at the bottom in the beginning.
+        // This is different from the MATLAB version.
         phi = view * radian_delta;  // Angle between incoming X-ray and the y-axis.
 
         // xy coordinates of the detector center.
@@ -130,7 +130,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
         for (size_t det_pix_idx = 0; det_pix_idx < num_det_pix; det_pix_idx++) {
             // The source and detector have numbering from 0~n-1 from the left when the X-ray direction is up.
-            // At the start, this means that 0 is on the right of the source and n-1 is on the left of the source.
+            // At the start, this means that 0 is on the right of the detector and n-1 is on the left of the detector.
             x_end = det_center_x + (det_offset - det_pix_idx * det_pix_len) * cosf(-phi);
             y_end = det_center_y + (det_offset - det_pix_idx * det_pix_len) * sinf(-phi);
 
@@ -151,11 +151,6 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                     row = floorf(img_range_y - y_pos);
                     dc = img_range_x + x_pos - col;
                     dr = img_range_y - y_pos - row;
-
-                    if ((col + 1) * num_img_pix_rows + (row + 1) >= num_elements) {
-                        cout << "Rows: " << row << " Cols: " << col << endl;
-                        cout << "X: " << x_pos << " Y: " << y_pos << endl;
-                    }
 
                     // Column major indexing of the input.
                     top_left = image.at(col * num_img_pix_rows + row);
@@ -181,25 +176,26 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 // Error checking code.
 void errorCheck(int nlhs, int nrhs, const mxArray *prhs[]){
-    /* check for proper number of arguments */
+    /* Check for proper number of arguments. */
     if(nrhs!=8) {
         mexErrMsgIdAndTxt("CT1:forward_projection:nrhs","Eight inputs required.");
     }
     if(nlhs!=1) {
         mexErrMsgIdAndTxt("CT1:forward_projection:nlhs","One output required.");
     }
-    /* make sure the first input argument is scalar */
+    /* Make sure the first input argument is an array. */
     if( !mxIsSingle(prhs[0]) || mxIsComplex(prhs[0])) {
         mexErrMsgIdAndTxt("CT1:forward_projection:notSingle","Input must be a single-type floating point array.");
     }
-    /* check that number of rows in second input argument is 1 */
+    /* Check that the input is a matrix. */
     if(mxGetNumberOfDimensions(prhs[0])!=2) {
         mexErrMsgIdAndTxt("CT1:forward_projection:notMatrix","The first input must be a 2D matrix.");
     }
-    // Maybe add type checks for the others too.
+    /* Check that all other inputs are scalars. */
     for (size_t n=1; n < nrhs; n++) {
-        if( !mxIsScalar(prhs[n])) {
-            mexErrMsgIdAndTxt("CT1:forward_projection:notScalar","All inputs except the first must be scalars.");
+        if( !mxIsScalar(prhs[n]) || mxIsComplex(prhs[n]) ) {
+            mexErrMsgIdAndTxt("CT1:forward_projection:notRealScalar","All inputs except the first must be"
+                                                                 "(real-valued) scalars.");
         }
     }
 }
