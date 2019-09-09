@@ -8,5 +8,5 @@
 #include <vector>
 
 void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
-
+    using std::cout; using std::endl;
 }

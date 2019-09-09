@@ -8,7 +8,7 @@
  * This results in two extra memory allocations and one extra zero-initialization.
  */
 
-#include <mex.h>
+#include "mex.h"
 
 #define _USE_MATH_DEFINES  // Necessary on older systems to access PI and other constants.
 #include <cmath>
@@ -93,7 +93,6 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     size_t num_acquisitions = floorf((dist2src + dist2det) / sampling_interval);
 
-    // Computational Routine
     float phi;
     float det_center_x, det_center_y;
     float x_delta, y_delta;
@@ -116,6 +115,10 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     // Initializing sinogram with 0s. Unavoidable memory allocation by 0. Empty vector is not possible.
     std::vector<float> sinogram(num_det_pix * num_views, 0);
 
+    // Computational Routine.
+    // The for-loops here should parallelize very well as they are independent of one another.
+    // Please take note of this in CUDA or OpenACC implementations.
+    // Perhaps use multi-processing to parallelize the for-loops.
     for (size_t view = 0; view < num_views; view++) {
         // Rotating clockwise with the detector at the top and source at the bottom in the beginning.
         // This is different from the radon function in MATLAB. Flip the output left-right to get equivalent outputs.
@@ -143,6 +146,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
                 // Ignoring cases where X-rays hit the edges. This will be fixed later.
                 // Alternatively, the input data could be zero-padded to allow this code to work precisely.
+                // EPS necessary for numerical stability.
                 in_range = (-img_range_x <= x_pos) && (x_pos < img_range_x - EPS)
                         && (-img_range_y + EPS < y_pos) && (y_pos <= img_range_y);
 
