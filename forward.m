@@ -3,10 +3,8 @@
 % 
 % Forward propagation with mex.
 
-file_name = '/home/veritas/CLionProjects/CT1/forward_projection.cpp';
-
 % mex file_name
-mex -R2018a forward_projection.cpp
+mex -R2018a forward_projection_.cpp
 
 %%
 img_size = 256;
@@ -29,7 +27,7 @@ figure(1)
 imshow(sinogram, []); colorbar();
 
 %%
-my_sinogram = forward_projection(input_array, num_det_pix, det_pix_len,...
+my_sinogram = forward_projection_(input_array, num_det_pix, det_pix_len,...
     img_pix_len_x, img_pix_len_y, sampling_interval, num_views,...
     projection_range);
 

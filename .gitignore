@@ -35,5 +35,7 @@
 /cmake-build-debug/
 /cmake-build-release/
 
-# mex files
+# mex file extensions
 *.mexa64
+*.mexmaci64
+*.mexw64
