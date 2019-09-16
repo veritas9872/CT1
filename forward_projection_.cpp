@@ -137,10 +137,10 @@ public:
                     if (in_range) {
                         // Changing from xy coordinates to row/column coordinate system of the input image.
                         // Each index value is set as the center of each pixel with that index with zero-indexing.
-                        col = floorf(img_offset_x + x_pos);
-                        row = floorf(img_offset_y - y_pos);
-                        dc = img_offset_x + x_pos - col;
-                        dr = img_offset_y - y_pos - row;
+                        col = floorf((img_offset_x + x_pos) / img_pix_len_x);
+                        row = floorf((img_offset_y - y_pos) / img_pix_len_y);
+                        dc = (img_offset_x + x_pos) / img_pix_len_x - col;
+                        dr = (img_offset_y - y_pos) / img_pix_len_y - row;
 
                         // Aligned and coalesced memory access is impossible, making this code memory inefficient.
                         // Indexing is done as (row, column) no matter what the underlying storage pattern is.
