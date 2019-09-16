@@ -1,6 +1,6 @@
 /*
  * Trying out the new MATLAB C++ mex API.
- * This requires MATLAB 2018a or above and C++11 or above.
+ * This requires MATLAB 2018a or above and C++11 or above with a 64bit CPU.
  * The new API is cleaner and has many new features.
  * It also integrates with C++ far better than the previous API.
  */
@@ -47,8 +47,8 @@ public:
             cout << "Warning! Sampling interval is shorter than pixel length!" << endl;
         }
 
-        // const std::vector<size_t> dims = inputs[0].getDimensions();
-        const matlab::data::ArrayDimensions dims = inputs[0].getDimensions();  // Equivalent to commented version above.
+        // const std::vector<size_t> dims = inputs[0].getDimensions();  // Equivalent to version below.
+        const matlab::data::ArrayDimensions dims = inputs[0].getDimensions();
         const size_t num_img_pix_rows = dims[0];
         const size_t num_img_pix_cols = dims[1];
         const size_t num_elements = inputs[0].getNumberOfElements();
@@ -89,12 +89,12 @@ public:
         const float EPS = 1E-4;  // Necessary for numerical stability in edge cases of range.
         const float rad = (M_PIf32 / 180);  // (PI / 180) in float. Used for degree to radian conversion.
         const float radian_delta = projection_range / num_views * rad;
-        // An offset is the distance from the center to the center of the last pixel.
+        // An offset is the distance from the center to the center of the first/last pixel.
         const float img_offset_x = static_cast<float>(num_img_pix_cols - 1) * img_pix_len_x / 2;
         const float img_offset_y = static_cast<float>(num_img_pix_rows - 1) * img_pix_len_y / 2;
         const float det_offset = static_cast<float>(num_det_pix - 1) * det_pix_len / 2;
 
-        // Creating array that will be used as the output.
+        // Creating array that will be used as the output. A 2D matrix with (row: num_det_pix, col: num_views).
         TypedArray<float> sinogram = factory.createArray<float>({num_det_pix, num_views});
 
         // Computational Routine.
@@ -103,7 +103,8 @@ public:
         for (size_t view = 0; view < num_views; view++) {
             // Rotating clockwise with the detector at the top and source at the bottom in the beginning.
             // Detector center begins at (0, dist2det) in xy coordinates and rotates clockwise.
-            // This is different from the radon function in MATLAB. Flip the output left-right to get equivalent outputs.
+            // This is different from the radon function in MATLAB.
+            // Flip the output left-right to get equivalent outputs.
             phi = view * radian_delta;  // Angle between incoming X-ray and the y-axis.
 
             // xy coordinates of the detector center.
@@ -117,7 +118,7 @@ public:
             for (size_t det_pix_idx = 0; det_pix_idx < num_det_pix; det_pix_idx++) {
                 // The source and detector have numbering from 0~n-1 from the left when the X-ray direction is up.
                 // xy coordinates are in mm with the object center at the origin.
-                // At the start, this means that 0 is on the right of the detector and n-1 is on the left of the detector.
+                // At the start, this means that 0 is on the right of the detector and n-1 is on the left.
                 x_end = det_center_x + (det_offset - det_pix_idx * det_pix_len) * cosf(-phi);
                 y_end = det_center_y + (det_offset - det_pix_idx * det_pix_len) * sinf(-phi);
 
@@ -133,9 +134,8 @@ public:
                     in_range = (-img_offset_x <= x_pos) && (x_pos < img_offset_x - EPS)
                                && (-img_offset_y + EPS < y_pos) && (y_pos <= img_offset_y);
 
-
                     if (in_range) {
-                        // Changing from xy coordinates to row/column coordinate system of the input image in column-major.
+                        // Changing from xy coordinates to row/column coordinate system of the input image.
                         // Each index value is set as the center of each pixel with that index with zero-indexing.
                         col = floorf(img_offset_x + x_pos);
                         row = floorf(img_offset_y - y_pos);
