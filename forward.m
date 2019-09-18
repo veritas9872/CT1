@@ -2,9 +2,8 @@
 % Code for using mex for CT.
 % 
 % Forward propagation with mex.
-
-% mex file_name
-mex -R2018a forward_projection_.cpp
+clear
+mex -R2018a forward_projection.cpp
 
 %%
 img_size = 256;
@@ -27,7 +26,7 @@ figure(1)
 imshow(sinogram, []); colorbar();
 
 %%
-my_sinogram = forward_projection_(input_array, num_det_pix, det_pix_len,...
+my_sinogram = forward_projection(input_array, num_det_pix, det_pix_len,...
     img_pix_len_x, img_pix_len_y, sampling_interval, num_views,...
     projection_range);
 
@@ -51,3 +50,19 @@ img_delta = my_recon - recon;
 figure(6)
 imshow(img_delta, []); colorbar();
 
+%%
+% Compare execution time with MATLAB function.
+orig = @() radon(input_array, theta);
+mine = @() forward_projection(input_array, num_det_pix, det_pix_len,...
+    img_pix_len_x, img_pix_len_y, sampling_interval, num_views,...
+    projection_range);
+
+orig_time = timeit(orig);
+mine_time = timeit(mine);
+
+disp("Time taken by MATLAB native function.")
+disp(orig_time)
+disp("Time taken by custom mex function.")
+disp(mine_time)
+disp("Relative Speedup (A value lesser than 1 indicates slowdown.)")
+disp(orig_time/mine_time)

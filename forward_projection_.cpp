@@ -53,8 +53,8 @@ public:
         const size_t num_img_pix_cols = dims[1];
         const size_t num_elements = inputs[0].getNumberOfElements();
 
-        cout << "Num cols: " << num_img_pix_cols << ". Num rows: "
-             << num_img_pix_rows << ". Total: " << num_elements << '.' << endl;
+//        cout << "Num cols: " << num_img_pix_cols << ". Num rows: "
+//             << num_img_pix_rows << ". Total: " << num_elements << '.' << endl;
 
         const float img_len_x = num_img_pix_cols * img_pix_len_x;
         const float img_len_y = num_img_pix_rows * img_pix_len_y;
@@ -93,6 +93,10 @@ public:
         const float img_offset_x = static_cast<float>(num_img_pix_cols - 1) * img_pix_len_x / 2;
         const float img_offset_y = static_cast<float>(num_img_pix_rows - 1) * img_pix_len_y / 2;
         const float det_offset = static_cast<float>(num_det_pix - 1) * det_pix_len / 2;
+
+        // Needed to replace division with multiplication.
+        const float img_pix_scale_x = 1 / img_pix_len_x;
+        const float img_pix_scale_y = 1 / img_pix_len_y;
 
         // Creating array that will be used as the output. A 2D matrix with (row: num_det_pix, col: num_views).
         TypedArray<float> sinogram = factory.createArray<float>({num_det_pix, num_views});
@@ -137,10 +141,11 @@ public:
                     if (in_range) {
                         // Changing from xy coordinates to row/column coordinate system of the input image.
                         // Each index value is set as the center of each pixel with that index with zero-indexing.
-                        col = floorf((img_offset_x + x_pos) / img_pix_len_x);
-                        row = floorf((img_offset_y - y_pos) / img_pix_len_y);
-                        dc = (img_offset_x + x_pos) / img_pix_len_x - col;
-                        dr = (img_offset_y - y_pos) / img_pix_len_y - row;
+                        // Maybe replace floor function with something more computationally efficient later.
+                        col = floorf((img_offset_x + x_pos) * img_pix_scale_x);
+                        row = floorf((img_offset_y - y_pos) * img_pix_scale_y);
+                        dc = (img_offset_x + x_pos) * img_pix_scale_x - col;
+                        dr = (img_offset_y - y_pos) * img_pix_scale_y - row;
 
                         // Aligned and coalesced memory access is impossible, making this code memory inefficient.
                         // Indexing is done as (row, column) no matter what the underlying storage pattern is.

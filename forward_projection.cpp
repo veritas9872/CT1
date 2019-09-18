@@ -13,7 +13,6 @@
 
 #define _USE_MATH_DEFINES  // Necessary on older systems to access PI and other constants.
 #include <cmath>
-#include <cassert>
 
 #include <iostream>
 #include <vector>
@@ -57,9 +56,9 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     const size_t num_img_pix_cols = mxGetN(prhs[0]);
     const size_t num_elements = mxGetNumberOfElements(prhs[0]);
 
-    cout << "Num cols: " << num_img_pix_cols << ". Num rows: "
-         << num_img_pix_rows << ". Total: " << num_elements << '.' << endl;
-    assert(num_img_pix_rows * num_img_pix_cols == num_elements);
+//    cout << "Num cols: " << num_img_pix_cols << ". Num rows: "
+//         << num_img_pix_rows << ". Total: " << num_elements << '.' << endl;
+//    assert(num_img_pix_rows * num_img_pix_cols == num_elements);
 
     // Unavoidable memory copy. No way to transfer data from C array to std vector without memory copy.
     // If memory copy can be removed while vector is still used, please do so. Memory copy is very time consuming.
@@ -114,6 +113,10 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     const float img_offset_y = static_cast<float>(num_img_pix_rows - 1) * img_pix_len_y / 2;
     const float det_offset = static_cast<float>(num_det_pix - 1) * det_pix_len / 2;
 
+    // Needed to replace division with multiplication.
+    const float img_pix_scale_x = 1 / img_pix_len_x;
+    const float img_pix_scale_y = 1 / img_pix_len_y;
+
     // Initializing sinogram with 0s. Unavoidable memory allocation by 0. Empty vector is not possible.
     std::vector<float> sinogram(num_det_pix * num_views, 0);
 
@@ -157,10 +160,10 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                 if (in_range) {
                     // Changing from xy coordinates to row/column coordinate system of the input image in column-major.
                     // Each index value is set as the center of each pixel with that index with zero-indexing.
-                    col = floorf((img_offset_x + x_pos) / img_pix_len_x);
-                    row = floorf((img_offset_y - y_pos) / img_pix_len_y);
-                    dc = (img_offset_x + x_pos) / img_pix_len_x - col;
-                    dr = (img_offset_y - y_pos) / img_pix_len_y - row;
+                    col = floorf((img_offset_x + x_pos) * img_pix_scale_x);
+                    row = floorf((img_offset_y - y_pos) * img_pix_scale_y);
+                    dc = (img_offset_x + x_pos) * img_pix_scale_x - col;
+                    dr = (img_offset_y - y_pos) * img_pix_scale_y - row;
 
 //                    assert((0 <= dc) && (dc < 1) && (0 <= dr) && (dr < 1));
 
