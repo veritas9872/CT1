@@ -3,8 +3,8 @@
 % 
 % Forward propagation with mex.
 clear
-mex -R2018a forward_projection.cpp
-mex forward_projection_.cpp
+mex -v GCC='/usr/bin/g++-6' -R2018a forward_projection.cpp
+mex -v GCC='/usr/bin/g++-6' forward_projection_.cpp
 
 %%
 img_size = 256;
@@ -18,7 +18,7 @@ img_pix_len_y=1;  % In mm
 
 sampling_interval=1;  % In mm
 num_views=270;
-projection_range=360;  % In degrees
+projection_range=270;  % In degrees
 
 theta = (0:(num_views-1)) * (projection_range/num_views);
 
@@ -55,27 +55,27 @@ imshow(img_delta, []); colorbar();
 %%
 % Compare execution time with MATLAB function.
 
-% orig = @() radon(input_array, theta);
-% mine = @() forward_projection(input_array, num_det_pix, det_pix_len,...
-%     img_pix_len_x, img_pix_len_y, sampling_interval, num_views,...
-%     projection_range);
-% cpp_mex = @() forward_projection_(input_array, num_det_pix, det_pix_len,...
-%     img_pix_len_x, img_pix_len_y, sampling_interval, num_views,...
-%     projection_range);
-% 
-% orig_time = timeit(orig);
-% mine_time = timeit(mine);
-% cpp_mex_time = timeit(cpp_mex);
-% 
-% disp("Time taken by MATLAB native function.")
-% disp(orig_time)
-% disp("Time taken by custom mex function.")
-% disp(mine_time)
-% disp("Time taken by the C++ mex API version.")
-% disp(cpp_mex_time)
-% 
-% % A value lesser than 1 indicates slowdown
-% disp("Relative Speedup for C mex")
-% disp(orig_time/mine_time)
-% disp("Relative Speedup for C++ mex")
-% disp(orig_time/cpp_mex_time)
+orig = @() radon(input_array, theta);
+mine = @() forward_projection(input_array, num_det_pix, det_pix_len,...
+    img_pix_len_x, img_pix_len_y, sampling_interval, num_views,...
+    projection_range);
+cpp_mex = @() forward_projection_(input_array, num_det_pix, det_pix_len,...
+    img_pix_len_x, img_pix_len_y, sampling_interval, num_views,...
+    projection_range);
+
+orig_time = timeit(orig);
+mine_time = timeit(mine);
+cpp_mex_time = timeit(cpp_mex);
+
+disp("Time taken by MATLAB native function.")
+disp(orig_time)
+disp("Time taken by custom mex function.")
+disp(mine_time)
+disp("Time taken by the C++ mex API version.")
+disp(cpp_mex_time)
+
+% A value lesser than 1 indicates slowdown
+disp("Relative Speedup for C mex")
+disp(orig_time/mine_time)
+disp("Relative Speedup for C++ mex")
+disp(orig_time/cpp_mex_time)

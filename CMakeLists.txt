@@ -9,6 +9,11 @@ find_package(Matlab REQUIRED)
 
 target_include_directories(CT1 PUBLIC ${Matlab_INCLUDE_DIRS})
 
+# Adding KFR library to perform FFT.
+add_subdirectory(kfr)
+target_link_libraries(CT1 kfr)
+target_link_libraries(CT1 kfr_dft)
+
 # This must come after add_executable.  # Assuming MATLAB version is 2018a or higher.
 matlab_add_mex(NAME forward_projection SRC forward_projection.cpp R2018a)
 matlab_add_mex(NAME forward_projection_ SRC forward_projection_.cpp R2018a)
