@@ -12,9 +12,11 @@
 #include <cmath>
 
 #include <iostream>
+#include <chrono>
 
 
 using std::cout; using std::endl;
+using std::chrono::high_resolution_clock; using std::chrono::duration_cast; using std::chrono::milliseconds;
 
 // MATLAB variable types
 using matlab::mex::ArgumentList;
@@ -23,10 +25,9 @@ using matlab::data::TypedArray;
 
 
 class MexFunction : public matlab::mex::Function {
-public:
     std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr = getEngine();  // Call MATLAB functions from C++
     matlab::data::ArrayFactory factory;  // Creates MATLAB arrays.
-
+public:
     void operator()(ArgumentList outputs, ArgumentList inputs) override {
         check_arguments(outputs, inputs);
         // const keyword added to prevent accidental memory copying.
@@ -104,12 +105,12 @@ public:
         // Computational Routine.
         // The for-loops here should parallelize very well as they are independent of one another.
         // Please take note in parallel implementations. Perhaps use multi-processing to parallelize the for-loops.
+        auto start = high_resolution_clock::now();
         for (size_t view = 0; view < num_views; view++) {
-            // Rotating clockwise with the detector at the top and source at the bottom in the beginning.
-            // Detector center begins at (0, dist2det) in xy coordinates and rotates clockwise.
-            // This is different from the radon function in MATLAB.
-            // Flip the output left-right to get equivalent outputs.
-            phi = view * radian_delta;  // Angle between incoming X-ray and the y-axis.
+            // Changed code to make the behavior the same as MATLAB's radon function.
+            // The detector starts at the bottom and rotates clockwise.
+            // However, the code is now very confusing.
+            phi = M_PIf32 - view * radian_delta;  // Angle between incoming X-ray and the y-axis.
 
             // xy coordinates of the detector center.
             det_center_x = dist2det * sinf(phi);
@@ -166,6 +167,9 @@ public:
                 sinogram[det_pix_idx][view] = ray_sum;
             }
         }
+        auto stop = high_resolution_clock::now();
+        auto duration = duration_cast<milliseconds>(stop - start);
+        cout << "Compute time in ms: " << duration.count() << endl;
         // Assign without memory copy through move semantics.
         outputs[0] = std::move(sinogram);
     }

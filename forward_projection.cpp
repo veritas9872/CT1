@@ -125,10 +125,10 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     // Please take note of this in CUDA or OpenACC implementations.
     // Perhaps use multi-processing to parallelize the for-loops.
     for (size_t view = 0; view < num_views; view++) {
-        // Rotating clockwise with the detector at the top and source at the bottom in the beginning.
-        // Detector center begins at (0, dist2det) in xy coordinates and rotates clockwise.
-        // This is different from the radon function in MATLAB. Flip the output left-right to get equivalent outputs.
-        phi = view * radian_delta;  // Angle between incoming X-ray and the y-axis.
+        // Changed code to make the behavior the same as MATLAB's radon function.
+        // The detector starts at the bottom and rotates clockwise.
+        // However, the code is now very confusing.
+        phi = M_PIf32 - view * radian_delta;  // Angle between incoming X-ray and the y-axis.
 
         // xy coordinates of the detector center.
         det_center_x = dist2det * sinf(phi);
