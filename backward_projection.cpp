@@ -6,7 +6,7 @@
 #include <iostream>
 #include <vector>
 
-#include <kfr>
+#include <kfr/dft.hpp>
 
 void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     using std::cout; using std::endl;
@@ -22,6 +22,9 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     const size_t num_det_pix = mxGetM(prhs[0]);
     const size_t num_views = mxGetN(prhs[0]);
+
+    size_t pad_size = num_det_pix / 2;  // Equivalent to flooring if num_det_pix is odd.
+    kfr::univector<float> padded_sinogram((2 * pad_size + num_det_pix) * num_views, 0);
 
 
 
