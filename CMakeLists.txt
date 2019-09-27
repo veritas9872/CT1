@@ -3,16 +3,15 @@ project(CT1)
 
 set(CMAKE_CXX_STANDARD 11)
 
-add_executable(CT1 forward_projection.cpp backward_projection.cpp forward_projection_.cpp)
+add_executable(CT1 forward_projection.cpp backward_projection.cpp forward_projection_.cpp back_projection.cpp)
 
 find_package(Matlab REQUIRED)
 
 target_include_directories(CT1 PUBLIC ${Matlab_INCLUDE_DIRS})
 
-# Adding KFR library to perform FFT.
-add_subdirectory(kfr)
-target_link_libraries(CT1 kfr)
-target_link_libraries(CT1 kfr_dft)
+set (FFTW_DIRS ~/intel/mkl/include)  # FFTW interface to intel MKL FFT library.
+
+target_include_directories(CT1 PRIVATE ${FFTW_DIRS})
 
 # This must come after add_executable.  # Assuming MATLAB version is 2018a or higher.
 matlab_add_mex(NAME forward_projection SRC forward_projection.cpp R2018a)

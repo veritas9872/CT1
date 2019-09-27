@@ -17,13 +17,13 @@
 #include <iostream>
 #include <vector>
 
-void errorCheck(int nlhs, int nrhs, const mxArray *prhs[]);
+void error_check(int nlhs, int nrhs, const mxArray **prhs);
 
 /* The gateway function */
 void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     using std::cout; using std::endl;
 
-    errorCheck(nlhs, nrhs, prhs);  // Checks for errors in inputs and outputs.
+    error_check(nlhs, nrhs, prhs);  // Checks for errors in inputs and outputs.
 
     float *input_array;
     float *output_array;
@@ -108,6 +108,8 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     const float EPS = 1E-4;  // Necessary for numerical stability in edge cases of range.
     const float rad = (M_PIf32 / 180);  // (PI / 180) in float. Used for degree to radian conversion.
     const float radian_delta = projection_range / num_views * rad;
+    // Correct for the increased intensity when a shorter sampling interval is used.
+    const float sample_scale = sampling_interval / sqrtf(img_pix_len_x * img_pix_len_y);
     // An offset is the distance from the center to the center of the last pixel.
     const float img_offset_x = static_cast<float>(num_img_pix_cols - 1) * img_pix_len_x / 2;
     const float img_offset_y = static_cast<float>(num_img_pix_rows - 1) * img_pix_len_y / 2;
@@ -182,7 +184,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                 }
             }
             // "sinogram" should be in column-major order.
-            sinogram.at(view * num_det_pix + det_pix_idx) = ray_sum;
+            sinogram.at(view * num_det_pix + det_pix_idx) = ray_sum * sample_scale;
         }
     }
     // Unavoidable memory copy again. Please remove this if it becomes possible at a later date.
@@ -191,7 +193,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 
 // Error checking code.
-void errorCheck(int nlhs, int nrhs, const mxArray *prhs[]){
+void error_check(int nlhs, int nrhs, const mxArray **prhs){
     /* Check for proper number of arguments. */
     if(nrhs!=8) {
         mexErrMsgIdAndTxt("CT1:forward_projection:nrhs","Eight inputs required.");
